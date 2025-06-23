@@ -8,7 +8,7 @@ print(resultat)
 def ecarttype(liste):
     moyenne = sum(liste) / len(liste)
     variance = sum((x - moyenne) ** 2 for x in liste) / len(liste)
-    return variance ** 0.5  # racine carrée sans math.sqrt
+    return variance ** 0.5  # racine carrée sans math.sqrt 
 
 def ecarttype2(notes):
     m = sum(notes) / len(notes)
