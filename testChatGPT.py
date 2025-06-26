@@ -132,6 +132,7 @@ class PuzzlePiece:
             self.canvas.tag_bind(rect, "<ButtonRelease-1>", self.snap_to_grid)
 
     def on_double_right_click(self, event):
+        if self.geniusSquare.blockers == []: return
         if not self.movable: return
         if self.isOnGrid: return
         self.rotation -= 1
@@ -139,12 +140,14 @@ class PuzzlePiece:
         self.redraw()
 
     def on_right_click(self, event):
+        if self.geniusSquare.blockers == []: return
         if not self.movable: return
         if self.isOnGrid: return
         self.rotation += 1
         self.redraw()
 
     def do_drag(self, event):
+        if self.geniusSquare.blockers == []: return
         if not self.movable: return
         dx = event.x - self.x
         dy = event.y - self.y
@@ -156,6 +159,7 @@ class PuzzlePiece:
             self.geniusSquare.hideSuccess()
 
     def snap_to_grid(self, event):
+        if self.geniusSquare.blockers == []: return
         if not self.movable: return
         grid_origin_x = 300 + (self.geniusSquare.margin["left"] if "left" in self.geniusSquare.margin else ((-self.geniusSquare.margin["right"]) if "right" in self.geniusSquare.margin else 0))
         grid_origin_y = 0 + (self.geniusSquare.margin["top"] if "top" in self.geniusSquare.margin else ((-self.geniusSquare.margin["bottom"]) if "bottom" in self.geniusSquare.margin else 0))
@@ -265,6 +269,12 @@ class GeniusSquare:
 
         btn3 = tk.Button(self.sidebar, text="Réinitialiser", command=self.reset)
         btn3.pack(pady=5)
+
+        btn4 = tk.Button(self.sidebar, text="DEBUG", command=self.debug)
+        btn4.pack(pady=5)
+
+    def debug(self):
+        print("Debug")
 
     def reset(self):
         self.canvas.delete("all")
