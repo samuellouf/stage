@@ -7,7 +7,15 @@ from itertools import count
 CELL_SIZE = 50
 GRID_SIZE = 6
 
-dev = True
+dev = False
+
+def flatten(xss):
+    return [x for xs in xss for x in xs]
+
+def sorted(list):
+    sorted = copy.copy(list)
+    sorted.sort()
+    return sorted
 
 def convertDice(dice):
     return (["A", "B", "C", "D", "E", "F"].index(dice[0]), (int(dice[1]) - 1))
@@ -118,6 +126,34 @@ class PuzzlePiece:
         self.create_piece()
         self.bind_events()
 
+    def get_block_coordinates(self, x, y, r, m):
+        """
+        Returns a list of absolute block coordinates (in pixels) for the piece placed at (x, y),
+        with rotation r (0-3) and mirrored m (boolean).
+        """
+        coords = []
+        for dx, dy in self.shape:
+            if m:
+                dy = -dy
+            for _ in range(r % 4):
+                dx, dy = -dy, dx
+            abs_x = x + dx
+            abs_y = y + dy
+            coords.append((abs_x, abs_y))
+        return coords
+    
+    def auto_get_block_coordinates(self):
+        grid_x, grid_y = self.get_position()
+        return self.get_block_coordinates(grid_x, grid_y, self.rotation, self.mirrored)
+    
+    def get_position(self):
+        grid_origin_x = 300 + (self.geniusSquare.margin["left"] if "left" in self.geniusSquare.margin else ((-self.geniusSquare.margin["right"]) if "right" in self.geniusSquare.margin else 0))
+        grid_origin_y = 0 + (self.geniusSquare.margin["top"] if "top" in self.geniusSquare.margin else ((-self.geniusSquare.margin["bottom"]) if "bottom" in self.geniusSquare.margin else 0))
+        grid_x = (self.x - grid_origin_x) // CELL_SIZE
+        grid_y = (self.y - grid_origin_y) // CELL_SIZE
+
+        return (grid_x, grid_y)
+    
     def create_piece(self):
         self.rects.clear()
         self.canvas_piece_ids = []
@@ -153,7 +189,6 @@ class PuzzlePiece:
         if self.geniusSquare.blockers == []: return
         if not self.movable: return
         if self.isOnGrid: return
-        self.rotation -= 1
         self.mirrored = not self.mirrored
         self.redraw()
 
@@ -161,7 +196,12 @@ class PuzzlePiece:
         if self.geniusSquare.blockers == []: return
         if not self.movable: return
         if self.isOnGrid: return
-        self.rotation += 1
+
+        if self.rotation == 3:
+            self.rotation = 0
+        else:
+            self.rotation += 1
+
         self.redraw()
 
     def do_drag(self, event):
@@ -175,8 +215,6 @@ class PuzzlePiece:
         self.y = event.y
         if (False in [block.isOnGrid for block in self.geniusSquare.pieces]):
             self.geniusSquare.hideSuccess()
-
-        print((self.original_x, self.original_y))
 
     def snap_to_grid(self, event):
         if self.geniusSquare.blockers == []: return
@@ -197,8 +235,23 @@ class PuzzlePiece:
             self.geniusSquare.hideSuccess()
         
         if 0 <= grid_x < GRID_SIZE and 0 <= grid_y < GRID_SIZE:
-            print(self.geniusSquare.blockers_coords)
-            print((grid_x, grid_y))
+            if sorted(flatten(self.auto_get_block_coordinates()))[-1] > 5:
+                self.x = self.original_x
+                self.y = self.original_y
+                self.redraw()
+                self.geniusSquare.hideSuccess()
+                self.isOnGrid = False
+                return
+            
+            for (x, y) in self.get_block_coordinates(grid_x, grid_y, self.rotation, self.mirrored):
+                if (x, y) in self.geniusSquare.blockers_coords:
+                    self.isOnGrid = False
+                    self.x = self.original_x
+                    self.y = self.original_y
+                    self.redraw()
+                    return
+
+            
             self.x = grid_origin_x + grid_x * CELL_SIZE
             self.y = grid_origin_y + grid_y * CELL_SIZE
             self.redraw()
@@ -223,7 +276,7 @@ class PuzzlePiece:
 class GeniusSquare:
     def __init__(self, root):
         self.root = root
-        self.root.title("Genius Square – Version complète")
+        self.root.title("Genius Square")
 
         self.canvas = tk.Canvas(root, width=700, height=400, bg="white")
         self.canvas.pack(side="left")
@@ -305,7 +358,7 @@ class GeniusSquare:
             debugbtn.pack(pady=5)
 
     def debug(self):
-        print("Debug")
+        self.pieces[0].log()
 
     def reset(self):
         self.canvas.delete("all")
